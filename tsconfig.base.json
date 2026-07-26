@@ -1,0 +1,4 @@
+{
+  "$comment": "Punto de entrada de la configuración TS compartida del monorepo. La base real la posee el paquete @readhub/config; este archivo la re-expone en la raíz (referenciado por apps y packages vía '../../tsconfig.base.json'). Sin duplicación.",
+  "extends": "./packages/config/tsconfig.base.json"
+}
