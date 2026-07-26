@@ -1,0 +1,35 @@
+{
+  "skill_name": "readhub-article-writer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Quiero escribir un artículo técnico para ReadHub sobre cómo implementamos Row Level Security multi-tenant en Postgres, pero tengo la idea en la cabeza y un par de notas sueltas nada más. Ayudame a arrancar.",
+      "expected_output": "Se orienta (tipo/audiencia/etapa), hace planificación (pregunta central, contribución, alcance, preguntas guía) y propone un esquema usando la variante how-to de la plantilla; ofrece verificar contribución contra ReadHub. No reescribe un artículo entero de la nada.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Te paso el borrador de mi artículo. Siento que hay partes confusas y que repito ideas. ¿Podés revisarlo? Prefiero que me marques las cosas, no que lo reescribas entero.\n\n[borrador de ~6 párrafos sobre embeddings y búsqueda semántica]",
+      "expected_output": "Pasadas de claridad y redundancia con citas concretas del texto y su ubicación, propuestas 'antes → después' con justificación, respetando la voz del autor (marca y sugiere, no impone). Ofrece siguiente paso.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Ya casi termino mi artículo sobre indexación vectorial. Antes de publicarlo quiero saber si hay artículos parecidos en ReadHub y si me estoy contradiciendo con alguno.",
+      "expected_output": "Deriva consultas desde la tesis/keywords y usa la búsqueda del MCP de ReadHub para relacionados y contradicciones; si el MCP no está conectado, lo dice con claridad y ofrece dejar consultas/claims listos sin inventar artículos.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "El artículo está listo. Ayudame con un buen título, el resumen para la portada y las palabras clave.",
+      "expected_output": "3–5 títulos etiquetados con criterio, un resumen autocontenido (contexto→método→resultado→implicancia) fiel al contenido, y 5–8 keywords coherentes con título y resumen. Ofrece la checklist de pre-publicación.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "¿Qué dice el artículo de RLS que ya está publicado en ReadHub sobre el rendimiento?",
+      "expected_output": "NO debería activar la skill de autoría: es una pregunta de lectura sobre contenido ya publicado, que corresponde al chat RAG de lectura, no a la asistencia de escritura.",
+      "files": []
+    }
+  ]
+}
