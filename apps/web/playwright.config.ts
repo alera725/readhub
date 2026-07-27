@@ -37,11 +37,16 @@ export default defineConfig({
     // Firefox/WebKit/mobile se pueden habilitar cuando se necesiten.
   ],
 
-  // Arranca la app web para las pruebas. Local reutiliza un server existente;
-  // en CI siempre lo levanta fresco. (Para un server tipo producción en CI,
-  // se puede cambiar a "npm run build && npm run start".)
+  // Arranca la app web para las pruebas. Local reutiliza un server existente
+  // y corre en modo dev (recompila rápido entre corridas). En CI se compila
+  // primero y se sirve el build de producción: el dev server (compilación
+  // on-demand de Turbopack) es propenso a una carrera entre el primer click
+  // en un chunk recién solicitado y su compilación en segundo plano, mucho
+  // más probable en una VM compartida y más lenta que en una máquina local
+  // — causaba un "Failed to execute 'fetch' on 'Window': Invalid value" al
+  // hacer login, reproducible solo en el runner de GitHub Actions.
   webServer: {
-    command: "npm run dev",
+    command: isCI ? "npm run build && npm run start" : "npm run dev",
     url: baseURL,
     reuseExistingServer: !isCI,
     timeout: 120_000,
