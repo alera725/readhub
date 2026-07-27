@@ -30,6 +30,12 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     trace: "on-first-retry",
+    // /dev/shm suele venir muy chico en runners de CI compartidos; Chromium
+    // usa memoria compartida para IPC entre procesos y puede degradarse de
+    // formas difíciles de diagnosticar (p. ej. tirar excepciones sueltas en
+    // vez de un crash claro) cuando se queda sin espacio ahí. Es el ajuste
+    // estándar para correr Chromium headless en este tipo de entornos.
+    launchOptions: isCI ? { args: ["--disable-dev-shm-usage"] } : {},
   },
 
   projects: [
