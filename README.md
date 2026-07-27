@@ -224,8 +224,8 @@ npm run test:e2e    # Pruebas E2E con Playwright (apps/web)
 
 | Job | Qué hace | Necesita secrets |
 | --- | --- | --- |
-| `quality` | `npm ci` → typecheck → lint → `npm run test` (64 pruebas unitarias) | No |
-| `e2e` (depende de `quality`) | Instala Chromium de Playwright, levanta la app (`npm run dev`) y corre las pruebas E2E contra el proyecto Supabase remoto | Sí |
+| `quality` | `npm ci` → typecheck → lint → `npm run test` (71 pruebas unitarias) | No |
+| `e2e` (depende de `quality`) | Compila la app (`npm run build && npm run start`), instala Chromium de Playwright y corre las pruebas E2E contra el proyecto Supabase remoto (auth, publish+like+comment, asistente RAG) | Sí |
 
 Secrets a configurar en GitHub → Settings → Secrets and variables → Actions:
 
@@ -233,9 +233,9 @@ Secrets a configurar en GitHub → Settings → Secrets and variables → Action
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | Arranque de la app en el job `e2e` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Arranque de la app en el job `e2e` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Opcional | Solo si algún flujo E2E ejercita indexación/embeddings |
-| `OPENAI_API_KEY` | Opcional | Solo si algún flujo E2E ejercita el asistente RAG |
-| `HF_TOKEN` | Opcional | Solo si algún flujo E2E ejercita el chat |
+| `OPENAI_API_KEY` | Sí | `assistant.spec.ts` ejercita el asistente RAG real (embedding de la consulta) |
+| `HF_TOKEN` | Sí | `assistant.spec.ts` ejercita el asistente RAG real (generación de la respuesta) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Opcional | Solo si algún flujo E2E ejercita indexación/embeddings de forma directa |
 | `E2E_EMAIL`, `E2E_PASSWORD` | Opcional | Sobrescriben el usuario de prueba; por defecto usan el usuario sembrado en `supabase/seed.sql` (`carla.reader@readhub.dev`) |
 
 El job `quality` no requiere ningún secret: typecheck, lint y las pruebas unitarias no acceden a Supabase ni a proveedores de IA (los clientes leen `process.env` recién al invocarse, y las pruebas los mockean).

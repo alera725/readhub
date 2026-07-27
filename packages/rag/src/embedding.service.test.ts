@@ -1,9 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// Se mockean los parsers de documentos (límite externo real): las pruebas
+// verifican que extractArticleContent despacha al parser correcto según la
+// extensión, no la corrección de mammoth/unpdf en sí (ya están probados
+// aguas arriba, en sus propios paquetes).
+vi.mock("mammoth", () => ({
+  default: { extractRawText: vi.fn(async () => ({ value: "texto del docx" })) },
+}));
+vi.mock("unpdf", () => ({
+  getDocumentProxy: vi.fn(async () => "fake-pdf-proxy"),
+  extractText: vi.fn(async () => ({ text: "texto del pdf", totalPages: 1 })),
+}));
+
+import mammoth from "mammoth";
+import { extractText } from "unpdf";
 import {
   buildArticleEmbeddingText,
   generateEmbedding,
   persistArticleEmbedding,
   embedArticle,
+  extractArticleContent,
   computeContentHash,
   EMBEDDING_DIMENSIONS,
 } from "./embedding.service";
@@ -37,6 +53,21 @@ function makeFakeAdmin() {
     } as any,
     state,
   };
+}
+
+// Cliente admin falso para Storage: simula un `download()` que devuelve un
+// Blob con el contenido dado (o un error si se pide simular uno).
+function makeFakeStorageAdmin(blob: Blob | null, error: Error | null = null) {
+  return {
+    storage: {
+      from() {
+        return {
+          download: () => Promise.resolve({ data: blob, error }),
+        };
+      },
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
 }
 
 beforeEach(() => {
@@ -134,5 +165,66 @@ describe("computeContentHash — determinismo", () => {
   it("devuelve el mismo hash para el mismo texto y distinto para otro", () => {
     expect(computeContentHash("hola")).toBe(computeContentHash("hola"));
     expect(computeContentHash("hola")).not.toBe(computeContentHash("chau"));
+  });
+});
+
+describe("extractArticleContent — despacho por extensión", () => {
+  it("sin document_path: no toca Storage y devuelve null", async () => {
+    const admin = makeFakeStorageAdmin(null);
+    const result = await extractArticleContent(admin, { document_path: null });
+    expect(result).toBeNull();
+  });
+
+  it("extensión no soportada (.zip): no toca Storage y devuelve null", async () => {
+    const admin = makeFakeStorageAdmin(null);
+    const result = await extractArticleContent(admin, {
+      document_path: "articles/a1/doc.zip",
+    });
+    expect(result).toBeNull();
+  });
+
+  it(".txt: lee el texto plano tal cual", async () => {
+    const blob = new Blob(["  contenido de prueba  "], { type: "text/plain" });
+    const admin = makeFakeStorageAdmin(blob);
+    const result = await extractArticleContent(admin, {
+      document_path: "articles/a1/doc.txt",
+    });
+    expect(result).toBe("contenido de prueba");
+  });
+
+  it(".docx: delega en mammoth.extractRawText", async () => {
+    const blob = new Blob([new Uint8Array([1, 2, 3])]);
+    const admin = makeFakeStorageAdmin(blob);
+    const result = await extractArticleContent(admin, {
+      document_path: "articles/a1/doc.docx",
+    });
+    expect(result).toBe("texto del docx");
+    expect(mammoth.extractRawText).toHaveBeenCalledOnce();
+  });
+
+  it(".pdf: delega en unpdf.extractText con mergePages", async () => {
+    const blob = new Blob([new Uint8Array([1, 2, 3])]);
+    const admin = makeFakeStorageAdmin(blob);
+    const result = await extractArticleContent(admin, {
+      document_path: "articles/a1/doc.pdf",
+    });
+    expect(result).toBe("texto del pdf");
+    expect(extractText).toHaveBeenCalledWith("fake-pdf-proxy", { mergePages: true });
+  });
+
+  it("propaga el error si Storage falla", async () => {
+    const admin = makeFakeStorageAdmin(null, new Error("bucket no disponible"));
+    await expect(
+      extractArticleContent(admin, { document_path: "articles/a1/doc.txt" })
+    ).rejects.toThrow("bucket no disponible");
+  });
+
+  it("texto extraído vacío (solo espacios) se normaliza a null", async () => {
+    const blob = new Blob(["   "], { type: "text/plain" });
+    const admin = makeFakeStorageAdmin(blob);
+    const result = await extractArticleContent(admin, {
+      document_path: "articles/a1/doc.txt",
+    });
+    expect(result).toBeNull();
   });
 });

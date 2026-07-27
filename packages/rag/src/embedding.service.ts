@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@readhub/types";
 import { fetchWithTimeout } from "@readhub/shared";
+import mammoth from "mammoth";
+import { extractText, getDocumentProxy } from "unpdf";
 
 // Cliente con service_role (bypass de RLS). La escritura en
 // `article_embeddings` solo es posible con este cliente — ver
@@ -74,13 +76,17 @@ export function buildArticleEmbeddingText(source: ArticleEmbeddingSource): strin
     : composed;
 }
 
+// Formatos soportados para extracción de texto (coincide con
+// ALLOWED_DOCUMENT_MIME_TYPES de @readhub/shared, que valida la carga).
+const SUPPORTED_EXTENSIONS = new Set(["txt", "pdf", "docx"]);
+
 // Extrae el cuerpo del artículo desde Storage para poder incluirlo en el
 // texto vectorizado. El contenido de ReadHub vive como archivo (no en la DB),
 // por lo que esta extracción es necesaria.
 //
-// En esta fase solo se procesa text/plain (.txt) de forma fiable. PDF/DOCX
-// requerirían parsers dedicados (mejora futura); para ellos se devuelve null
-// y el embedding se compone solo con título + resumen.
+// Soporta los tres formatos que la carga de artículos acepta (TXT/PDF/DOCX).
+// Para cualquier otro formato se devuelve null y el embedding se compone
+// solo con título + resumen (degradación controlada, no un error).
 export async function extractArticleContent(
   admin: AdminClient,
   article: Pick<ArticleRow, "document_path">
@@ -88,7 +94,7 @@ export async function extractArticleContent(
   if (!article.document_path) return null;
 
   const ext = article.document_path.split(".").pop()?.toLowerCase();
-  if (ext !== "txt") return null;
+  if (!ext || !SUPPORTED_EXTENSIONS.has(ext)) return null;
 
   const { data, error } = await admin.storage
     .from(BUCKET)
@@ -97,8 +103,32 @@ export async function extractArticleContent(
   if (error) throw error;
   if (!data) return null;
 
-  const text = (await data.text()).trim();
-  return text || null;
+  const text = await extractTextByExtension(ext, data);
+  return text?.trim() || null;
+}
+
+// Despacha al parser correspondiente. Cada rama devuelve texto plano; los
+// detalles de cada formato (streams, buffers, proxies de pdf.js) quedan
+// encapsulados aquí y no se filtran al resto del servicio.
+async function extractTextByExtension(ext: string, data: Blob): Promise<string> {
+  switch (ext) {
+    case "txt":
+      return data.text();
+    case "docx": {
+      const buffer = Buffer.from(await data.arrayBuffer());
+      const { value } = await mammoth.extractRawText({ buffer });
+      return value;
+    }
+    case "pdf": {
+      const bytes = new Uint8Array(await data.arrayBuffer());
+      const pdf = await getDocumentProxy(bytes);
+      const { text } = await extractText(pdf, { mergePages: true });
+      return text;
+    }
+    default:
+      // Inalcanzable: SUPPORTED_EXTENSIONS ya filtró antes de llegar acá.
+      return "";
+  }
 }
 
 // ---------------------------------------------------------------------------

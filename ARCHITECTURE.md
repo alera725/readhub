@@ -288,7 +288,7 @@ Indexación: articles (INSERT/UPDATE/DELETE) → Database Webhook → /api/webho
 
 | Archivo | Responsabilidad | Reutiliza |
 | --- | --- | --- |
-| `embedding.service.ts` | Genera y persiste embeddings (OpenAI `text-embedding-3-small`). Compone el texto (título+resumen+contenido), valida dimensión, UPSERT. Único que conoce OpenAI. | — |
+| `embedding.service.ts` | Genera y persiste embeddings (OpenAI `text-embedding-3-small`). Compone el texto (título+resumen+contenido), extrae el cuerpo desde Storage (TXT/PDF/DOCX vía `mammoth`/`unpdf`), valida dimensión, UPSERT. Único que conoce OpenAI. | — |
 | `indexing.service.ts` | Pipeline de indexación automática: detecta cambio, (re)genera y sincroniza el embedding; corto-circuito por `content_hash`; DELETE idempotente. | `embedding.service` |
 | `vector-search.service.ts` | Recuperación: embedding de la consulta + `match_articles` → Top-K estructurado. Parámetros de ranking configurables. | `embedding.service` |
 | `context-builder.service.ts` | Módulo puro: selecciona (piso de similitud, tope, dedup Jaccard), organiza y trunca por presupuesto; arma el prompt + las fuentes. | — |

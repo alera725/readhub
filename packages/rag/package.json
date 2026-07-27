@@ -12,7 +12,9 @@
     "@readhub/ai": "*",
     "@readhub/shared": "*",
     "@readhub/types": "*",
-    "@supabase/supabase-js": "^2.110.0"
+    "@supabase/supabase-js": "^2.110.0",
+    "mammoth": "^1.12.0",
+    "unpdf": "^1.8.0"
   },
   "scripts": {
     "test": "vitest run"
