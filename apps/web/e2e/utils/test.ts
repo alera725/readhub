@@ -1,12 +1,18 @@
 import { test as base } from "@playwright/test";
 import { LoginPage } from "../pages/login.page";
 import { DashboardPage } from "../pages/dashboard.page";
+import { UploadPage } from "../pages/upload.page";
+import { ArticlePage } from "../pages/article.page";
+import { AssistantPage } from "../pages/assistant.page";
 
 // Extiende el `test` base con fixtures que inyectan los Page Objects.
 // Así las specs quedan enfocadas en la lógica del flujo, reutilizando los POM.
 type Pages = {
   loginPage: LoginPage;
   dashboardPage: DashboardPage;
+  uploadPage: UploadPage;
+  articlePage: ArticlePage;
+  assistantPage: AssistantPage;
 };
 
 // El segundo argumento del fixture (el "use" de Playwright) se renombra a
@@ -19,6 +25,15 @@ export const test = base.extend<Pages>({
   },
   dashboardPage: async ({ page }, provide) => {
     await provide(new DashboardPage(page));
+  },
+  uploadPage: async ({ page }, provide) => {
+    await provide(new UploadPage(page));
+  },
+  articlePage: async ({ page }, provide) => {
+    await provide(new ArticlePage(page));
+  },
+  assistantPage: async ({ page }, provide) => {
+    await provide(new AssistantPage(page));
   },
 });
 
