@@ -8,6 +8,33 @@ test.describe("Autenticación", () => {
     loginPage,
     dashboardPage,
   }) => {
+    // DIAGNÓSTICO TEMPORAL: instrumenta window.fetch para ver los argumentos
+    // exactos en el momento del fallo "Failed to execute 'fetch' on 'Window':
+    // Invalid value", reproducible solo en GitHub Actions. Se revierte apenas
+    // se identifique la causa.
+    page.on("console", (msg) => {
+      console.log(`[browser:${msg.type()}] ${msg.text()}`);
+    });
+    await page.addInitScript(() => {
+      const orig = window.fetch;
+      window.fetch = function (...args: Parameters<typeof fetch>) {
+        try {
+          const [input, init] = args;
+          const headerEntries = init?.headers
+            ? Object.entries(init.headers as Record<string, unknown>).map(
+                ([k, v]) => `${k}=${typeof v}:${JSON.stringify(v)}`
+              )
+            : [];
+          console.log(
+            `[fetch-debug] url=${String(input)} method=${init?.method ?? "GET"} signal=${typeof init?.signal} headers=[${headerEntries.join(", ")}]`
+          );
+        } catch (e) {
+          console.log(`[fetch-debug] logging failed: ${String(e)}`);
+        }
+        return orig.apply(this, args);
+      };
+    });
+
     // 1. Abrir la aplicación: una ruta protegida redirige al Login.
     await page.goto("/");
     await expect(page).toHaveURL(/\/login/);
