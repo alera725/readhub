@@ -30,11 +30,11 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     trace: "on-first-retry",
-    // /dev/shm suele venir muy chico en runners de CI compartidos; Chromium
-    // usa memoria compartida para IPC entre procesos y puede degradarse de
-    // formas difíciles de diagnosticar (p. ej. tirar excepciones sueltas en
-    // vez de un crash claro) cuando se queda sin espacio ahí. Es el ajuste
-    // estándar para correr Chromium headless en este tipo de entornos.
+    // Endurecimiento estándar para Chromium headless en runners de CI
+    // compartidos, donde /dev/shm suele venir muy chico. Se investigó como
+    // posible causa de un fallo de E2E en CI que en realidad era un secret
+    // de GitHub corrupto (sin relación con esto) — se conserva de todos
+    // modos porque es buena práctica, no porque haya un bug confirmado.
     launchOptions: isCI ? { args: ["--disable-dev-shm-usage"] } : {},
   },
 
@@ -45,12 +45,11 @@ export default defineConfig({
 
   // Arranca la app web para las pruebas. Local reutiliza un server existente
   // y corre en modo dev (recompila rápido entre corridas). En CI se compila
-  // primero y se sirve el build de producción: el dev server (compilación
-  // on-demand de Turbopack) es propenso a una carrera entre el primer click
-  // en un chunk recién solicitado y su compilación en segundo plano, mucho
-  // más probable en una VM compartida y más lenta que en una máquina local
-  // — causaba un "Failed to execute 'fetch' on 'Window': Invalid value" al
-  // hacer login, reproducible solo en el runner de GitHub Actions.
+  // primero y se sirve el build de producción — más representativo del
+  // deploy real y evita compilación on-demand durante la corrida. Se
+  // investigó también como posible causa del mismo fallo de CI mencionado
+  // arriba (tampoco lo era); se conserva por ser la forma correcta de
+  // correr E2E contra CI de todos modos.
   webServer: {
     command: isCI ? "npm run build && npm run start" : "npm run dev",
     url: baseURL,
